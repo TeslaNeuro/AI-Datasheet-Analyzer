@@ -110,16 +110,16 @@ file host (GitHub Pages, Netlify, S3, Cloudflare Pages, etc.).
 
 ## 🧰 Tech stack
 
-## 👤 Author
-
-Created and maintained by **Arshia Keshvari** (`@TeslaNeuro`).
-
 - Vite + React 18 + TypeScript
 - Tailwind CSS
 - `pdfjs-dist` for client-side PDF text extraction
 - `react-markdown` + `remark-gfm` for inline markdown in bullets
 - [Puter.js v2](https://docs.puter.com/AI/chat/) for keyless model access
 - OpenAI-compatible chat completions API with JSON mode (BYOK fallback)
+
+## 👤 Author
+
+Created and maintained by **Arshia Keshvari** (`@TeslaNeuro`).
 
 ## 📜 License
 
