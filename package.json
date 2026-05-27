@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Web app that analyses electronic component datasheets and produces structured engineering summaries.",
+  "author": "Arshia Keshvari (@TeslaNeuro)",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

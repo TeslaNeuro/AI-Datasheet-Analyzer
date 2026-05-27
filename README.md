@@ -1,4 +1,4 @@
-# Datasheet Analyzer
+# AI Datasheet Analyzer 🔎📄
 
 A web app that turns any electronic component datasheet (PDF) into a concise,
 structured engineering summary — written from the point of view of an experienced
@@ -7,7 +7,7 @@ electronics engineer focused on **risk**, **bring-up**, and **design watch-outs*
 It adapts the output to the component type — IC, sensor, power device, connector,
 module, equipment, etc. — rather than forcing a fixed template.
 
-## Features
+## Features ✨
 
 - **Zero-setup default (Puter.js)** — out of the box, the app runs through
   [Puter.js](https://docs.puter.com/AI/chat/). No API key, no server, nothing
@@ -29,7 +29,7 @@ module, equipment, etc. — rather than forcing a fixed template.
 - **Exports** — copy/download the structured result as Markdown or JSON.
 - **No backend** — pure static SPA.
 
-## Output structure
+## Output structure 🧱
 
 The model produces JSON that the UI renders into nine adaptive sections:
 
@@ -48,7 +48,7 @@ custom "extra sections" for component-specific concerns (e.g. *Calibration*
 for a sensor, *Safety / Isolation* for a SMPS, *Mating / IP rating* for a
 connector).
 
-## Quick start
+## Quick start 🚀
 
 ```bash
 npm install
@@ -60,7 +60,7 @@ Then open <http://localhost:5173>, drop a PDF, and click **Analyse**. That's it.
 The first call via Puter will open Puter's sign-in popup. Once you're signed
 in, future calls are silent.
 
-### Switching providers
+### Switching providers 🔁
 
 Open **Settings** to switch from Puter to a Bring-Your-Own-Key provider:
 
@@ -77,7 +77,7 @@ or may not honour JSON mode, so the prompt also instructs the model directly
 to emit a single JSON object — and the parser will recover the JSON out of
 prose if needed.
 
-### Build for production
+### Build for production 🏗️
 
 ```bash
 npm run build
@@ -87,7 +87,7 @@ npm run preview
 The output in `dist/` is a fully static SPA that you can host on any static
 file host (GitHub Pages, Netlify, S3, Cloudflare Pages, etc.).
 
-## Privacy
+## Privacy 🔐
 
 - PDFs are parsed locally in your browser.
 - This app has no backend. Extracted text is sent **directly** from your
@@ -98,7 +98,7 @@ file host (GitHub Pages, Netlify, S3, Cloudflare Pages, etc.).
   - **BYOK mode**: text and your API key go directly to the endpoint you
     configured; the key is stored only in `localStorage`.
 
-## Limits
+## Limits ⚠️
 
 - Very large datasheets (often 200+ pages) are truncated to roughly 180 000
   characters before being sent to the model. The UI flags when this happens
@@ -108,7 +108,11 @@ file host (GitHub Pages, Netlify, S3, Cloudflare Pages, etc.).
 - The quality of the summary depends heavily on the model. For safety-critical
   decisions, always cross-check against the original datasheet.
 
-## Tech stack
+## Tech stack 🧰
+
+## Author 👤
+
+Created and maintained by **Arshia Keshvari** (`@TeslaNeuro`).
 
 - Vite + React 18 + TypeScript
 - Tailwind CSS
@@ -117,6 +121,6 @@ file host (GitHub Pages, Netlify, S3, Cloudflare Pages, etc.).
 - [Puter.js v2](https://docs.puter.com/AI/chat/) for keyless model access
 - OpenAI-compatible chat completions API with JSON mode (BYOK fallback)
 
-## License
+## License 📄
 
 MIT
