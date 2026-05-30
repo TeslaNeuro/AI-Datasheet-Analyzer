@@ -93,7 +93,7 @@ export interface AnalysisError {
 
 export type AnalysisResponse = AnalysisResult | AnalysisError;
 
-export type ProviderId = "puter" | "openai" | "openrouter" | "custom";
+export type ProviderId = "puter" | "ollama" | "openai" | "openrouter" | "custom";
 
 export interface ProviderConfig {
   provider: ProviderId;
@@ -108,6 +108,8 @@ export interface ProviderPreset {
   defaultModel: string;
   /** True if this provider does not require the user to supply an API key. */
   keyless?: boolean;
+  /** True if the base URL is fixed and shouldn't be shown to the user (e.g. Puter). */
+  hideBaseUrl?: boolean;
   /** Short tagline shown in the settings UI. */
   blurb?: string;
 }
@@ -118,8 +120,17 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     baseUrl: "",
     defaultModel: "claude-sonnet-4-5",
     keyless: true,
+    hideBaseUrl: true,
     blurb:
       "Uses puter.js. No API key needed — your users pay via their own Puter account (free credits to start).",
+  },
+  ollama: {
+    label: "Ollama (local)",
+    baseUrl: "http://localhost:11434/v1",
+    defaultModel: "qwen2.5:14b-instruct",
+    keyless: true,
+    blurb:
+      "Run models locally with Ollama. No API key needed. Requires CORS to be enabled on your Ollama instance (see README).",
   },
   openai: {
     label: "OpenAI",
@@ -138,6 +149,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     baseUrl: "",
     defaultModel: "",
     blurb:
-      "Any OpenAI-compatible /chat/completions endpoint — Groq, Together, vLLM, LM Studio, Ollama, Gemini's OpenAI shim, etc.",
+      "Any OpenAI-compatible /chat/completions endpoint — Groq, Together, vLLM, LM Studio, Gemini's OpenAI shim, etc.",
   },
 };

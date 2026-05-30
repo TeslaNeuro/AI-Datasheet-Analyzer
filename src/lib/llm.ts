@@ -22,11 +22,19 @@ export async function analyseDatasheet(args: AnalyseArgs): Promise<AnalysisRespo
 /* OpenAI-compatible HTTP path (OpenAI, OpenRouter, Groq, Together, Ollama…) */
 /* ------------------------------------------------------------------------- */
 
+// Providers that work over the OpenAI-compatible /chat/completions wire
+// format but do NOT require an API key (typically self-hosted local servers).
+const KEYLESS_OPENAI_COMPAT: ReadonlySet<string> = new Set(["ollama"]);
+
 async function analyseViaOpenAICompatible(args: AnalyseArgs): Promise<AnalysisResponse> {
   const { config } = args;
-  if (!config.apiKey) throw new Error("API key is required for this provider.");
   if (!config.baseUrl) throw new Error("API base URL is required.");
   if (!config.model) throw new Error("Model is required.");
+
+  const keyless = KEYLESS_OPENAI_COMPAT.has(config.provider);
+  if (!keyless && !config.apiKey) {
+    throw new Error("API key is required for this provider.");
+  }
 
   const url = `${config.baseUrl.replace(/\/+$/, "")}/chat/completions`;
   const body = {
@@ -50,22 +58,43 @@ async function analyseViaOpenAICompatible(args: AnalyseArgs): Promise<AnalysisRe
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${config.apiKey}`,
   };
+  // Send Authorization only if the user provided a key. Ollama accepts any
+  // value (or none); sending no header avoids confusing local proxies.
+  if (config.apiKey) {
+    headers["Authorization"] = `Bearer ${config.apiKey}`;
+  }
   if (config.provider === "openrouter") {
     headers["HTTP-Referer"] = window.location.origin;
     headers["X-Title"] = "Datasheet Analyzer";
   }
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-    signal: args.signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: args.signal,
+    });
+  } catch (e) {
+    // Network-level failure. Local Ollama users almost always hit this because
+    // CORS isn't enabled — surface a targeted hint.
+    if (config.provider === "ollama") {
+      throw new Error(
+        `Could not reach Ollama at ${config.baseUrl}. Check that Ollama is running and that CORS is enabled — set OLLAMA_ORIGINS to "*" (or this site's origin) and restart Ollama. Original error: ${(e as Error).message}`,
+      );
+    }
+    throw e;
+  }
 
   if (!res.ok) {
     const text = await safeReadText(res);
+    if (config.provider === "ollama" && res.status === 404) {
+      throw new Error(
+        `Ollama returned 404 — the model "${config.model}" is probably not pulled yet. Run \`ollama pull ${config.model}\` and retry. ${text}`.trim(),
+      );
+    }
     throw new Error(
       `LLM request failed (${res.status} ${res.statusText}). ${text || ""}`.trim(),
     );
