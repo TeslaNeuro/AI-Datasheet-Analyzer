@@ -57,8 +57,10 @@ export default function App() {
   const apiReady = useMemo(() => {
     if (!config.model) return false;
     const preset = PROVIDER_PRESETS[config.provider];
-    if (preset?.keyless) return true;
-    return !!(config.apiKey && config.baseUrl);
+    if (!preset) return false;
+    if (!preset.hideBaseUrl && !config.baseUrl) return false;
+    if (!preset.keyless && !config.apiKey) return false;
+    return true;
   }, [config]);
 
   const run = useCallback(async () => {
@@ -187,7 +189,11 @@ export default function App() {
               )}
               {apiReady && PROVIDER_PRESETS[config.provider]?.keyless && (
                 <p className="mt-2 text-xs text-accent-400">
-                  Using Puter — no API key needed.
+                  {config.provider === "puter"
+                    ? "Using Puter — no API key needed."
+                    : config.provider === "ollama"
+                      ? `Using local Ollama (${config.model}).`
+                      : "Using keyless provider."}
                 </p>
               )}
             </div>
