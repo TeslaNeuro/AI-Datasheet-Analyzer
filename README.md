@@ -70,11 +70,11 @@ Open **Settings** to switch from Puter to another provider:
 
 | Provider       | Key needed? | Suggested model                                          | Notes                                                                 |
 | -------------- | ----------- | -------------------------------------------------------- | --------------------------------------------------------------------- |
-| **Puter**      | No          | `claude-sonnet-4-5`, `gpt-5.4-nano`, `gemini-2.5-flash`  | Keyless, user-pays via Puter account.                                 |
-| **Ollama**     | No          | `qwen2.5:14b-instruct`, `llama3.3`                       | 100% local. Requires CORS to be enabled — see below.                  |
-| OpenAI         | Yes         | `gpt-4o-mini` or `gpt-4o`                                | Bring your own key.                                                   |
-| OpenRouter     | Yes         | `anthropic/claude-3.5-sonnet`                            | One key, hundreds of models incl. free-tier ones.                     |
-| Custom         | Yes         | Any OpenAI-compatible model                              | Groq, Together, vLLM, LM Studio, Gemini's OpenAI shim, etc.           |
+| **Puter**      | **No**          | `claude-sonnet-4-5`, `gpt-5.4-nano`, `gemini-2.5-flash`  | Keyless, user-pays via Puter account.                                 |
+| **Ollama**     | **No**          | `qwen2.5:14b-instruct`, `llama3.3`                       | 100% local. Requires CORS to be enabled — see below.                  |
+| **OpenAI**         | **Yes**         | `gpt-4o-mini` or `gpt-4o`                                | Bring your own key.                                                   |
+| **OpenRouter**     | **Yes**         | `anthropic/claude-3.5-sonnet`                            | One key, hundreds of models incl. free-tier ones.                     |
+| **Custom**         | **Yes**         | **Any OpenAI-compatible model**                              | Groq, Together, vLLM, LM Studio, Gemini's OpenAI shim, etc.           |
 
 For the BYOK providers the model should ideally support JSON mode
 (`response_format: json_object`). Puter routes to underlying vendors that may
