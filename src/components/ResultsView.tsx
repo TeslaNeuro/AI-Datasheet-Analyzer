@@ -20,7 +20,15 @@ import {
 
 interface Props {
   result: AnalysisResult;
-  meta: { fileName: string; numPages: number; truncated: boolean; model: string };
+  meta: { fileName: string; numPages: number; truncated: boolean; model: string; elapsedMs?: number };
+}
+
+function formatElapsed(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)} s`;
+  const m = Math.floor(ms / 60_000);
+  const s = Math.floor((ms % 60_000) / 1000);
+  return `${m}m ${s.toString().padStart(2, "0")}s`;
 }
 
 export function ResultsView({ result, meta }: Props) {
@@ -73,8 +81,22 @@ export function ResultsView({ result, meta }: Props) {
               {id.partNumber ?? "Unknown part number"}
             </h2>
             <p className="mt-1 max-w-3xl text-sm text-ink-300">{id.primaryFunction}</p>
-            <div className="mt-2 text-xs text-ink-500">
-              <span className="font-mono">{meta.fileName}</span> &middot; {meta.numPages} pages &middot; model <span className="font-mono">{meta.model}</span>
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
+              <span className="font-mono">{meta.fileName}</span>
+              <span aria-hidden>&middot;</span>
+              <span>{meta.numPages} pages</span>
+              <span aria-hidden>&middot;</span>
+              <span>
+                model <span className="font-mono">{meta.model}</span>
+              </span>
+              {typeof meta.elapsedMs === "number" && meta.elapsedMs > 0 && (
+                <>
+                  <span aria-hidden>&middot;</span>
+                  <span className="font-mono text-accent-400 tabular-nums">
+                    completed in {formatElapsed(meta.elapsedMs)}
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
