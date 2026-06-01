@@ -27,13 +27,20 @@ declare global {
     toString(): string;
   }
 
+  interface PuterStreamChunk {
+    text?: string;
+    type?: string;
+  }
+
+  type PuterChatResult = PuterChatResponse | AsyncIterable<PuterStreamChunk>;
+
   interface PuterAi {
     chat(
       messages: PuterChatMessage[],
       testMode?: boolean,
       options?: PuterChatOptions,
-    ): Promise<PuterChatResponse>;
-    chat(prompt: string, options?: PuterChatOptions): Promise<PuterChatResponse>;
+    ): Promise<PuterChatResult>;
+    chat(prompt: string, options?: PuterChatOptions): Promise<PuterChatResult>;
   }
 
   interface PuterAuth {

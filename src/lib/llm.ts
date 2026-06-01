@@ -1,6 +1,12 @@
 import { SYSTEM_PROMPT, buildUserPrompt } from "./prompt";
 import type { AnalysisResponse, ProviderConfig } from "./types";
 
+export interface StreamProgress {
+  delta: string;
+  total: string;
+  chars: number;
+}
+
 export interface AnalyseArgs {
   config: ProviderConfig;
   fileName: string;
@@ -9,6 +15,12 @@ export interface AnalyseArgs {
   guessedPart: string | null;
   text: string;
   signal?: AbortSignal;
+  /**
+   * Called as the model streams output. The same callback fires for both
+   * Puter and OpenAI-compatible providers, so the UI doesn't have to care
+   * which backend is running.
+   */
+  onProgress?: (p: StreamProgress) => void;
 }
 
 export async function analyseDatasheet(args: AnalyseArgs): Promise<AnalysisResponse> {
@@ -19,11 +31,9 @@ export async function analyseDatasheet(args: AnalyseArgs): Promise<AnalysisRespo
 }
 
 /* ------------------------------------------------------------------------- */
-/* OpenAI-compatible HTTP path (OpenAI, OpenRouter, Groq, Together, Ollama…) */
+/* OpenAI-compatible HTTP path (OpenAI, OpenRouter, Ollama, Groq, …)         */
 /* ------------------------------------------------------------------------- */
 
-// Providers that work over the OpenAI-compatible /chat/completions wire
-// format but do NOT require an API key (typically self-hosted local servers).
 const KEYLESS_OPENAI_COMPAT: ReadonlySet<string> = new Set(["ollama"]);
 
 async function analyseViaOpenAICompatible(args: AnalyseArgs): Promise<AnalysisResponse> {
@@ -40,6 +50,7 @@ async function analyseViaOpenAICompatible(args: AnalyseArgs): Promise<AnalysisRe
   const body = {
     model: config.model,
     temperature: 0.2,
+    stream: true,
     response_format: { type: "json_object" as const },
     messages: [
       { role: "system" as const, content: SYSTEM_PROMPT },
@@ -58,9 +69,8 @@ async function analyseViaOpenAICompatible(args: AnalyseArgs): Promise<AnalysisRe
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    Accept: "text/event-stream",
   };
-  // Send Authorization only if the user provided a key. Ollama accepts any
-  // value (or none); sending no header avoids confusing local proxies.
   if (config.apiKey) {
     headers["Authorization"] = `Bearer ${config.apiKey}`;
   }
@@ -78,8 +88,6 @@ async function analyseViaOpenAICompatible(args: AnalyseArgs): Promise<AnalysisRe
       signal: args.signal,
     });
   } catch (e) {
-    // Network-level failure. Local Ollama users almost always hit this because
-    // CORS isn't enabled — surface a targeted hint.
     if (config.provider === "ollama") {
       throw new Error(
         `Could not reach Ollama at ${config.baseUrl}. Check that Ollama is running and that CORS is enabled — set OLLAMA_ORIGINS to "*" (or this site's origin) and restart Ollama. Original error: ${(e as Error).message}`,
@@ -100,13 +108,75 @@ async function analyseViaOpenAICompatible(args: AnalyseArgs): Promise<AnalysisRe
     );
   }
 
-  const data = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  const content = data?.choices?.[0]?.message?.content;
-  if (!content) throw new Error("LLM returned an empty response.");
+  // Some local servers ignore `stream: true` and return a regular JSON body
+  // instead of an SSE stream. Detect and fall back gracefully.
+  const contentType = res.headers.get("content-type") || "";
+  const isSSE = contentType.includes("event-stream") && !!res.body;
+  if (!isSSE) {
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    const content = data?.choices?.[0]?.message?.content ?? "";
+    if (!content) throw new Error("LLM returned an empty response.");
+    args.onProgress?.({ delta: content, total: content, chars: content.length });
+    return parseJsonLenient(content);
+  }
 
-  return parseJsonLenient(content);
+  const total = await consumeOpenAISSE(res, args.onProgress, args.signal);
+  if (!total) throw new Error("LLM returned an empty response.");
+  return parseJsonLenient(total);
+}
+
+async function consumeOpenAISSE(
+  res: Response,
+  onProgress: ((p: StreamProgress) => void) | undefined,
+  signal: AbortSignal | undefined,
+): Promise<string> {
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let total = "";
+
+  try {
+    while (true) {
+      if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE events end with a blank line; split on newlines and keep the
+      // last (potentially incomplete) line in `buffer`.
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+        const payload = trimmed.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        try {
+          const obj = JSON.parse(payload) as {
+            choices?: { delta?: { content?: string } }[];
+          };
+          const delta = obj?.choices?.[0]?.delta?.content;
+          if (delta) {
+            total += delta;
+            onProgress?.({ delta, total, chars: total.length });
+          }
+        } catch {
+          // Partial chunk — wait for more data.
+        }
+      }
+    }
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return total;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -133,21 +203,43 @@ async function analyseViaPuter(args: AnalyseArgs): Promise<AnalysisResponse> {
     },
   ];
 
-  // Race the Puter call against the abort signal — puter.ai.chat doesn't
-  // accept an AbortSignal directly, so we simulate cancellation at the boundary.
   const chatPromise = puterApi.chat(messages, false, {
     model: args.config.model,
     temperature: 0.2,
-    // Pass JSON mode through — Puter routes to underlying vendors that may honour it.
+    stream: true,
     response_format: { type: "json_object" },
   });
 
-  const response = await raceAbort(chatPromise, args.signal);
+  const result = await raceAbort(chatPromise, args.signal);
 
-  const content = extractPuterText(response);
-  if (!content) throw new Error("Puter returned an empty response.");
+  let total = "";
+  if (isAsyncIterable<PuterStreamChunk>(result)) {
+    for await (const part of result) {
+      if (args.signal?.aborted) throw new DOMException("Aborted", "AbortError");
+      const chunk = extractStreamChunkText(part);
+      if (chunk) {
+        total += chunk;
+        args.onProgress?.({ delta: chunk, total, chars: total.length });
+      }
+    }
+  } else {
+    // Puter ignored stream: true and returned a complete response.
+    total = extractPuterText(result as PuterChatResponse);
+    if (total) {
+      args.onProgress?.({ delta: total, total, chars: total.length });
+    }
+  }
 
-  return parseJsonLenient(content);
+  if (!total) throw new Error("Puter returned an empty response.");
+  return parseJsonLenient(total);
+}
+
+function extractStreamChunkText(part: PuterStreamChunk | unknown): string {
+  if (!part || typeof part !== "object") return "";
+  const p = part as PuterStreamChunk & { delta?: { content?: string } };
+  if (typeof p.text === "string") return p.text;
+  if (p.delta && typeof p.delta.content === "string") return p.delta.content;
+  return "";
 }
 
 function extractPuterText(resp: PuterChatResponse): string {
@@ -158,7 +250,6 @@ function extractPuterText(resp: PuterChatResponse): string {
       .map((part) => (part && typeof part === "object" && "text" in part ? part.text ?? "" : ""))
       .join("");
   }
-  // Last-ditch: Puter responses have a .toString() that yields the text.
   try {
     return String(resp);
   } catch {
@@ -166,8 +257,12 @@ function extractPuterText(resp: PuterChatResponse): string {
   }
 }
 
+function isAsyncIterable<T>(x: unknown): x is AsyncIterable<T> {
+  return !!x && typeof (x as { [Symbol.asyncIterator]?: unknown })[Symbol.asyncIterator] === "function";
+}
+
 /**
- * Puter loads asynchronously via a <script defer> in index.html. Poll briefly
+ * Puter loads asynchronously via <script defer> in index.html. Poll briefly
  * for it to become available so the first call doesn't race the script tag.
  */
 async function waitForPuter(signal?: AbortSignal): Promise<PuterAi> {
@@ -222,8 +317,6 @@ function parseJsonLenient(content: string): AnalysisResponse {
   try {
     return JSON.parse(cleaned) as AnalysisResponse;
   } catch {
-    // Recover the largest JSON object in the response if the model wrapped it
-    // in prose (more likely without strict JSON mode).
     const first = cleaned.indexOf("{");
     const last = cleaned.lastIndexOf("}");
     if (first !== -1 && last > first) {
