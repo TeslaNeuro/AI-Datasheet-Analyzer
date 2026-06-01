@@ -15,6 +15,17 @@ interface RunMeta {
   numPages: number;
   truncated: boolean;
   model: string;
+  elapsedMs?: number;
+}
+
+const PREVIEW_CHARS = 360;
+
+function formatElapsed(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)} s`;
+  const m = Math.floor(ms / 60_000);
+  const s = Math.floor((ms % 60_000) / 1000);
+  return `${m}m ${s.toString().padStart(2, "0")}s`;
 }
 
 export default function App() {
@@ -28,7 +39,14 @@ export default function App() {
   const [meta, setMeta] = useState<RunMeta | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [notDatasheet, setNotDatasheet] = useState<string | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [streamChars, setStreamChars] = useState(0);
+  const [streamPreview, setStreamPreview] = useState("");
+
   const abortRef = useRef<AbortController | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const streamBufferRef = useRef("");
+  const tickerRef = useRef<number | null>(null);
 
   useEffect(() => {
     saveProviderConfig(config);
@@ -37,6 +55,12 @@ export default function App() {
   const reset = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
+    if (tickerRef.current !== null) {
+      window.clearInterval(tickerRef.current);
+      tickerRef.current = null;
+    }
+    startTimeRef.current = null;
+    streamBufferRef.current = "";
     setStage("idle");
     setProgress(null);
     setExtracted(null);
@@ -44,6 +68,9 @@ export default function App() {
     setMeta(null);
     setErrorMsg(null);
     setNotDatasheet(null);
+    setElapsedMs(0);
+    setStreamChars(0);
+    setStreamPreview("");
   }, []);
 
   const onFileChange = useCallback(
@@ -63,6 +90,32 @@ export default function App() {
     return true;
   }, [config]);
 
+  // Drive the live elapsed-time + streaming preview while busy.
+  useEffect(() => {
+    const busy = stage === "extracting" || stage === "analysing";
+    if (!busy) {
+      if (tickerRef.current !== null) {
+        window.clearInterval(tickerRef.current);
+        tickerRef.current = null;
+      }
+      return;
+    }
+    if (tickerRef.current !== null) return;
+    tickerRef.current = window.setInterval(() => {
+      const start = startTimeRef.current;
+      if (start !== null) setElapsedMs(performance.now() - start);
+      const buf = streamBufferRef.current;
+      setStreamChars(buf.length);
+      setStreamPreview(buf.slice(-PREVIEW_CHARS));
+    }, 100);
+    return () => {
+      if (tickerRef.current !== null) {
+        window.clearInterval(tickerRef.current);
+        tickerRef.current = null;
+      }
+    };
+  }, [stage]);
+
   const run = useCallback(async () => {
     if (!file) return;
     if (!apiReady) {
@@ -73,8 +126,13 @@ export default function App() {
     setNotDatasheet(null);
     setResult(null);
     setMeta(null);
-    setStage("extracting");
     setProgress(null);
+    setStreamChars(0);
+    setStreamPreview("");
+    setElapsedMs(0);
+    streamBufferRef.current = "";
+    startTimeRef.current = performance.now();
+    setStage("extracting");
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -103,7 +161,16 @@ export default function App() {
         guessedPart: guessed,
         text: doc.fullText,
         signal: controller.signal,
+        onProgress: (p) => {
+          // Cheap, allocation-free path: only update the ref here. The
+          // ticker reads this ref every 100 ms and flushes to React state,
+          // so we never re-render per token.
+          streamBufferRef.current = p.total;
+        },
       });
+
+      const finalElapsed =
+        startTimeRef.current !== null ? performance.now() - startTimeRef.current : 0;
 
       if ((response as AnalysisError).error) {
         const err = response as AnalysisError;
@@ -118,7 +185,9 @@ export default function App() {
         numPages: doc.numPages,
         truncated: doc.truncated,
         model: config.model,
+        elapsedMs: finalElapsed,
       });
+      setElapsedMs(finalElapsed);
       setStage("done");
     } catch (e) {
       if ((e as Error).name === "AbortError") {
@@ -220,16 +289,22 @@ export default function App() {
 
         {busy && (
           <div className="card p-5">
-            <div className="flex items-center gap-3">
-              <IconSpinner width={18} height={18} className="text-accent-400" />
-              <div className="text-sm text-ink-200">
-                {stage === "extracting"
-                  ? progress
-                    ? `Extracting text — page ${progress.done} / ${progress.total}…`
-                    : "Extracting text from PDF…"
-                  : "Analysing with model… this can take 10–40 seconds depending on size."}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <IconSpinner width={18} height={18} className="text-accent-400" />
+                <div className="text-sm text-ink-200">
+                  {stage === "extracting"
+                    ? progress
+                      ? `Extracting text — page ${progress.done} / ${progress.total}…`
+                      : "Extracting text from PDF…"
+                    : "Analysing with model…"}
+                </div>
+              </div>
+              <div className="flex items-baseline gap-1 font-mono text-sm text-accent-400 tabular-nums">
+                <span>{formatElapsed(elapsedMs)}</span>
               </div>
             </div>
+
             {stage === "extracting" && progress && (
               <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-ink-800">
                 <div
@@ -238,10 +313,39 @@ export default function App() {
                 />
               </div>
             )}
+
             {extracted && stage === "analysing" && (
-              <div className="mt-3 text-xs text-ink-500">
-                Extracted {extracted.numPages} pages, ~{extracted.fullText.length.toLocaleString()} characters
-                {extracted.truncated && " (truncated to fit context)"}.
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-500">
+                <span>
+                  Sent {extracted.numPages} pages, ~{extracted.fullText.length.toLocaleString()} chars
+                  {extracted.truncated && " (truncated)"}.
+                </span>
+                <span className="font-mono tabular-nums">
+                  Received {streamChars.toLocaleString()} chars
+                </span>
+              </div>
+            )}
+
+            {stage === "analysing" && (
+              <div className="mt-3 rounded-md border border-ink-800 bg-ink-950/70 p-2">
+                <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-ink-500">
+                  <span>Live model output</span>
+                  <span className="text-ink-600">{config.model}</span>
+                </div>
+                <pre
+                  className="scrollbar-slim h-[72px] overflow-hidden whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed text-ink-400"
+                  aria-live="polite"
+                  aria-atomic="false"
+                >
+                  {streamPreview || (
+                    <span className="text-ink-600">
+                      Waiting for first token… (cold-start can take 10–60 s on local models)
+                    </span>
+                  )}
+                  {streamPreview && (
+                    <span className="ml-0.5 inline-block animate-pulse text-accent-400">▋</span>
+                  )}
+                </pre>
               </div>
             )}
           </div>
