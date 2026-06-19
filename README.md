@@ -16,7 +16,7 @@ module, equipment, etc. — rather than forcing a fixed template.
   after that. The app itself is never billed.
 - **Local / private mode (Ollama)** — dedicated one-click preset for
   [Ollama](https://ollama.com). Runs entirely on your machine, no key, no
-  network calls to a third party. Bring your own model (`hf.co/yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF:Q4_K_M`,
+  network calls to a third party. Bring your own model (`gemma4`,
   `llama3.3`, etc.).
 - **Bring-your-own-key fallback** — switch to OpenAI, OpenRouter, or any
   other OpenAI-compatible `/chat/completions` endpoint (Groq, Together, vLLM,
