@@ -148,7 +148,7 @@ file host (GitHub Pages, Netlify, S3, Cloudflare Pages, etc.).
 
 ## 🧰 Tech stack
 
-- Vite + React 18 + TypeScript
+- Vite + React + TypeScript
 - Tailwind CSS
 - `pdfjs-dist` for client-side PDF text extraction
 - `react-markdown` + `remark-gfm` for inline markdown in bullets
