@@ -2,7 +2,9 @@ import { SYSTEM_PROMPT, buildUserPrompt } from "./prompt";
 import type { AnalysisResponse, ProviderConfig } from "./types";
 
 export interface StreamProgress {
+  /** Most recent delta. May be empty when the emit is a periodic flush. */
   delta: string;
+  /** Cumulative output so far. Built lazily — do not mutate. */
   total: string;
   chars: number;
 }
@@ -16,18 +18,75 @@ export interface AnalyseArgs {
   text: string;
   signal?: AbortSignal;
   /**
-   * Called as the model streams output. The same callback fires for both
-   * Puter and OpenAI-compatible providers, so the UI doesn't have to care
-   * which backend is running.
+   * Called as the model streams output. Throttled to ~50 ms — the UI
+   * ticker reads at ~100 ms anyway, so anything faster is wasted work.
    */
   onProgress?: (p: StreamProgress) => void;
 }
+
+/** How often to materialise the joined `total` string from the chunk array. */
+const EMIT_INTERVAL_MS = 50;
 
 export async function analyseDatasheet(args: AnalyseArgs): Promise<AnalysisResponse> {
   if (args.config.provider === "puter") {
     return analyseViaPuter(args);
   }
   return analyseViaOpenAICompatible(args);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Stream accumulator                                                        */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Building the live preview by `total += delta` allocates a new string
+ * for every SSE chunk — for a typical 5 000-chunk response that's
+ * ~O(N²) bytes of allocation churn. Instead we push deltas into an
+ * array and only materialise the joined string when we actually need to
+ * emit progress (throttled) or return the final result.
+ */
+class StreamBuffer {
+  private chunks: string[] = [];
+  private cachedTotal = "";
+  private dirty = false;
+  private lastEmit = 0;
+
+  push(delta: string): void {
+    if (!delta) return;
+    this.chunks.push(delta);
+    this.dirty = true;
+  }
+
+  /** Force a fresh join and emit, ignoring the throttle window. */
+  flush(onProgress?: (p: StreamProgress) => void, lastDelta = ""): void {
+    this.materialise();
+    onProgress?.({ delta: lastDelta, total: this.cachedTotal, chars: this.cachedTotal.length });
+    this.lastEmit = performance.now();
+  }
+
+  /** Throttled emit — call after every push. */
+  maybeEmit(onProgress: ((p: StreamProgress) => void) | undefined, lastDelta: string): void {
+    if (!onProgress) return;
+    const now = performance.now();
+    if (now - this.lastEmit < EMIT_INTERVAL_MS) return;
+    this.materialise();
+    onProgress({ delta: lastDelta, total: this.cachedTotal, chars: this.cachedTotal.length });
+    this.lastEmit = now;
+  }
+
+  total(): string {
+    this.materialise();
+    return this.cachedTotal;
+  }
+
+  private materialise(): void {
+    if (!this.dirty) return;
+    // Single contiguous join is far cheaper than N progressive concats —
+    // V8 / SpiderMonkey both special-case Array#join for small string
+    // chunks.
+    this.cachedTotal = this.chunks.length === 1 ? this.chunks[0] : this.chunks.join("");
+    this.dirty = false;
+  }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -134,20 +193,21 @@ async function consumeOpenAISSE(
 ): Promise<string> {
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
-  let buffer = "";
-  let total = "";
+  const buf = new StreamBuffer();
+  let lineBuffer = "";
+  let lastDelta = "";
 
   try {
     while (true) {
       if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+      lineBuffer += decoder.decode(value, { stream: true });
 
       // SSE events end with a blank line; split on newlines and keep the
-      // last (potentially incomplete) line in `buffer`.
-      const lines = buffer.split(/\r?\n/);
-      buffer = lines.pop() ?? "";
+      // last (potentially incomplete) line in `lineBuffer`.
+      const lines = lineBuffer.split(/\r?\n/);
+      lineBuffer = lines.pop() ?? "";
 
       for (const line of lines) {
         const trimmed = line.trim();
@@ -160,8 +220,9 @@ async function consumeOpenAISSE(
           };
           const delta = obj?.choices?.[0]?.delta?.content;
           if (delta) {
-            total += delta;
-            onProgress?.({ delta, total, chars: total.length });
+            buf.push(delta);
+            lastDelta = delta;
+            buf.maybeEmit(onProgress, delta);
           }
         } catch {
           // Partial chunk — wait for more data.
@@ -176,7 +237,8 @@ async function consumeOpenAISSE(
     }
   }
 
-  return total;
+  buf.flush(onProgress, lastDelta);
+  return buf.total();
 }
 
 /* ------------------------------------------------------------------------- */
@@ -212,24 +274,29 @@ async function analyseViaPuter(args: AnalyseArgs): Promise<AnalysisResponse> {
 
   const result = await raceAbort(chatPromise, args.signal);
 
-  let total = "";
+  const buf = new StreamBuffer();
+  let lastDelta = "";
   if (isAsyncIterable<PuterStreamChunk>(result)) {
     for await (const part of result) {
       if (args.signal?.aborted) throw new DOMException("Aborted", "AbortError");
       const chunk = extractStreamChunkText(part);
       if (chunk) {
-        total += chunk;
-        args.onProgress?.({ delta: chunk, total, chars: total.length });
+        buf.push(chunk);
+        lastDelta = chunk;
+        buf.maybeEmit(args.onProgress, chunk);
       }
     }
   } else {
     // Puter ignored stream: true and returned a complete response.
-    total = extractPuterText(result as PuterChatResponse);
-    if (total) {
-      args.onProgress?.({ delta: total, total, chars: total.length });
+    const text = extractPuterText(result as PuterChatResponse);
+    if (text) {
+      buf.push(text);
+      lastDelta = text;
     }
   }
 
+  buf.flush(args.onProgress, lastDelta);
+  const total = buf.total();
   if (!total) throw new Error("Puter returned an empty response.");
   return parseJsonLenient(total);
 }
@@ -272,7 +339,7 @@ async function waitForPuter(signal?: AbortSignal): Promise<PuterAi> {
   const deadline = Date.now() + 8000;
   while (Date.now() < deadline) {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
-    if (typeof puter !== "undefined" && puter?.ai?.chat) return puter.ai;
+    if (typeof puter !== "undefined" && typeof puter?.ai?.chat === "function") return puter.ai;
     await new Promise((r) => setTimeout(r, 100));
   }
   throw new Error(

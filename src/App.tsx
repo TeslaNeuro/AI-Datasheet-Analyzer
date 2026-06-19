@@ -3,9 +3,15 @@ import { Dropzone } from "./components/Dropzone";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { ResultsView } from "./components/ResultsView";
 import { IconBolt, IconSettings, IconSpinner, IconWarn, IconX } from "./components/Icons";
-import { extractPdfText, guessPartNumber, type ExtractedDocument } from "./lib/pdf";
+import { extractPdfText, guessPartNumber, hashFile, type ExtractedDocument } from "./lib/pdf";
 import { analyseDatasheet } from "./lib/llm";
 import { loadProviderConfig, saveProviderConfig } from "./lib/storage";
+import {
+  getCachedAnalysis,
+  getCachedExtraction,
+  setCachedAnalysis,
+  setCachedExtraction,
+} from "./lib/cache";
 import { PROVIDER_PRESETS, type AnalysisError, type AnalysisResult, type ProviderConfig } from "./lib/types";
 
 type Stage = "idle" | "extracting" | "analysing" | "done" | "error";
@@ -16,6 +22,8 @@ interface RunMeta {
   truncated: boolean;
   model: string;
   elapsedMs?: number;
+  /** True when the result was served from the local IndexedDB cache. */
+  cached?: boolean;
 }
 
 const PREVIEW_CHARS = 360;
@@ -138,9 +146,40 @@ export default function App() {
     abortRef.current = controller;
 
     try {
-      const doc = await extractPdfText(file, {
-        onProgress: (done, total) => setProgress({ done, total }),
-      });
+      // 1) Hash the file once. Reuse the buffer for pdf.js so we don't
+      // read the same blob twice.
+      const { hash, buffer } = await hashFile(file);
+
+      // 2) Full-result cache hit → render instantly.
+      const cachedAnalysis = await getCachedAnalysis(hash, config.provider, config.model);
+      if (cachedAnalysis) {
+        setResult(cachedAnalysis.result);
+        setMeta({
+          fileName: cachedAnalysis.meta.fileName,
+          numPages: cachedAnalysis.meta.numPages,
+          truncated: cachedAnalysis.meta.truncated,
+          model: config.model,
+          elapsedMs: cachedAnalysis.meta.elapsedMs,
+          cached: true,
+        });
+        setElapsedMs(0);
+        setStage("done");
+        return;
+      }
+
+      // 3) Extracted-text cache hit → skip pdf.js entirely.
+      let doc = await getCachedExtraction(hash);
+      if (!doc) {
+        doc = await extractPdfText(file, {
+          buffer,
+          signal: controller.signal,
+          onProgress: (done, total) => setProgress({ done, total }),
+        });
+        // Best-effort persist; never block the user-visible flow on it.
+        void setCachedExtraction(hash, doc);
+      } else {
+        setProgress({ done: doc.numPages, total: doc.numPages });
+      }
       setExtracted(doc);
 
       if (!doc.fullText.trim() || doc.fullText.trim().length < 200) {
@@ -179,7 +218,8 @@ export default function App() {
         return;
       }
 
-      setResult(response as AnalysisResult);
+      const result = response as AnalysisResult;
+      setResult(result);
       setMeta({
         fileName: file.name,
         numPages: doc.numPages,
@@ -189,6 +229,14 @@ export default function App() {
       });
       setElapsedMs(finalElapsed);
       setStage("done");
+
+      // Best-effort cache write — don't block UI on it.
+      void setCachedAnalysis(hash, config.provider, config.model, result, {
+        fileName: file.name,
+        numPages: doc.numPages,
+        truncated: doc.truncated,
+        elapsedMs: finalElapsed,
+      });
     } catch (e) {
       if ((e as Error).name === "AbortError") {
         setStage("idle");

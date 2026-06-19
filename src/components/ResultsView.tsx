@@ -20,7 +20,14 @@ import {
 
 interface Props {
   result: AnalysisResult;
-  meta: { fileName: string; numPages: number; truncated: boolean; model: string; elapsedMs?: number };
+  meta: {
+    fileName: string;
+    numPages: number;
+    truncated: boolean;
+    model: string;
+    elapsedMs?: number;
+    cached?: boolean;
+  };
 }
 
 function formatElapsed(ms: number): string {
@@ -76,6 +83,11 @@ export function ResultsView({ result, meta }: Props) {
               {meta.truncated && (
                 <span className="chip-warn">Datasheet truncated</span>
               )}
+              {meta.cached && (
+                <span className="chip-accent" title="Served from local cache — no model call">
+                  Cached
+                </span>
+              )}
             </div>
             <h2 className="mt-2 text-2xl font-semibold text-ink-50">
               {id.partNumber ?? "Unknown part number"}
@@ -93,7 +105,9 @@ export function ResultsView({ result, meta }: Props) {
                 <>
                   <span aria-hidden>&middot;</span>
                   <span className="font-mono text-accent-400 tabular-nums">
-                    completed in {formatElapsed(meta.elapsedMs)}
+                    {meta.cached
+                      ? `original run took ${formatElapsed(meta.elapsedMs)}`
+                      : `completed in ${formatElapsed(meta.elapsedMs)}`}
                   </span>
                 </>
               )}
