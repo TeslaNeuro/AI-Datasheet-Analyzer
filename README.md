@@ -87,7 +87,7 @@ prose if needed.
 1. Install Ollama from <https://ollama.com> and pull a capable model:
 
    ```bash
-   ollama pull hf.co/yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF:Q4_K_M
+   ollama pull gemma4
    ```
 
    For structured datasheet extraction, instruction-tuned models in the 14B+
