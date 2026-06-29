@@ -1,4 +1,5 @@
 import { SYSTEM_PROMPT, buildUserPrompt } from "./prompt";
+import { normalizeAnalysisResponse } from "./normalizeResult";
 import type { AnalysisResponse, ProviderConfig } from "./types";
 
 export interface StreamProgress {
@@ -382,14 +383,20 @@ async function safeReadText(res: Response): Promise<string> {
 function parseJsonLenient(content: string): AnalysisResponse {
   const cleaned = stripCodeFence(content).trim();
   try {
-    return JSON.parse(cleaned) as AnalysisResponse;
-  } catch {
+    return normalizeAnalysisResponse(JSON.parse(cleaned));
+  } catch (e) {
+    if (e instanceof Error && e.message === "Model returned invalid JSON structure.") {
+      throw e;
+    }
     const first = cleaned.indexOf("{");
     const last = cleaned.lastIndexOf("}");
     if (first !== -1 && last > first) {
       try {
-        return JSON.parse(cleaned.slice(first, last + 1)) as AnalysisResponse;
-      } catch {
+        return normalizeAnalysisResponse(JSON.parse(cleaned.slice(first, last + 1)));
+      } catch (inner) {
+        if (inner instanceof Error && inner.message === "Model returned invalid JSON structure.") {
+          throw inner;
+        }
         /* fall through */
       }
     }

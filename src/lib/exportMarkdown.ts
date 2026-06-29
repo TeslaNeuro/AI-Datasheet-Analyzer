@@ -18,7 +18,14 @@ export function analysisToMarkdown(
   r: AnalysisResult,
   meta: { fileName: string; numPages: number; truncated: boolean; model: string },
 ): string {
-  const id = r.identification;
+  const id = r.identification ?? {
+    componentType: "Unknown component",
+    manufacturer: null,
+    partNumber: null,
+    primaryFunction: "Not specified.",
+    keyFeatures: [],
+    typicalApplications: [],
+  };
   const lines: string[] = [];
 
   lines.push(`# Datasheet Summary: ${id.partNumber ?? id.componentType ?? "Unknown"}`);
@@ -124,7 +131,7 @@ export function analysisToMarkdown(
   }
 
   {
-    const k = r.risks;
+    const k = r.risks ?? {};
     lines.push(
       block(
         "7. Risks, Caveats & Design Watch-outs",
@@ -160,15 +167,15 @@ export function analysisToMarkdown(
   }
 
   {
-    const d = r.decisionSummary;
+    const d = r.decisionSummary ?? { bullets: [], pros: [], cons: [], redFlags: [] };
     lines.push(
       block(
         "9. Summary for Decision-Makers",
         [
           bullets(d.bullets),
-          d.pros.length ? `**Pros**\n${bullets(d.pros)}` : "",
-          d.cons.length ? `**Cons**\n${bullets(d.cons)}` : "",
-          d.redFlags.length ? `**Red Flags**\n${bullets(d.redFlags)}` : "",
+          d.pros?.length ? `**Pros**\n${bullets(d.pros)}` : "",
+          d.cons?.length ? `**Cons**\n${bullets(d.cons)}` : "",
+          d.redFlags?.length ? `**Red Flags**\n${bullets(d.redFlags)}` : "",
         ]
           .filter(Boolean)
           .join("\n"),

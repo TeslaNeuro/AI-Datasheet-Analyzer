@@ -12,6 +12,8 @@ import {
   setCachedAnalysis,
   setCachedExtraction,
 } from "./lib/cache";
+import { logError } from "./lib/logError";
+import { normalizeAnalysisResponse } from "./lib/normalizeResult";
 import { PROVIDER_PRESETS, type AnalysisError, type AnalysisResult, type ProviderConfig } from "./lib/types";
 
 type Stage = "idle" | "extracting" | "analysing" | "done" | "error";
@@ -25,8 +27,6 @@ interface RunMeta {
   /** True when the result was served from the local IndexedDB cache. */
   cached?: boolean;
 }
-
-const PREVIEW_CHARS = 360;
 
 function formatElapsed(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)} ms`;
@@ -48,12 +48,9 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [notDatasheet, setNotDatasheet] = useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
-  const [streamChars, setStreamChars] = useState(0);
-  const [streamPreview, setStreamPreview] = useState("");
 
   const abortRef = useRef<AbortController | null>(null);
   const startTimeRef = useRef<number | null>(null);
-  const streamBufferRef = useRef("");
   const tickerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -68,7 +65,6 @@ export default function App() {
       tickerRef.current = null;
     }
     startTimeRef.current = null;
-    streamBufferRef.current = "";
     setStage("idle");
     setProgress(null);
     setExtracted(null);
@@ -77,8 +73,6 @@ export default function App() {
     setErrorMsg(null);
     setNotDatasheet(null);
     setElapsedMs(0);
-    setStreamChars(0);
-    setStreamPreview("");
   }, []);
 
   const onFileChange = useCallback(
@@ -98,7 +92,7 @@ export default function App() {
     return true;
   }, [config]);
 
-  // Drive the live elapsed-time + streaming preview while busy.
+  // Drive the live elapsed-time display while busy.
   useEffect(() => {
     const busy = stage === "extracting" || stage === "analysing";
     if (!busy) {
@@ -112,9 +106,6 @@ export default function App() {
     tickerRef.current = window.setInterval(() => {
       const start = startTimeRef.current;
       if (start !== null) setElapsedMs(performance.now() - start);
-      const buf = streamBufferRef.current;
-      setStreamChars(buf.length);
-      setStreamPreview(buf.slice(-PREVIEW_CHARS));
     }, 100);
     return () => {
       if (tickerRef.current !== null) {
@@ -135,10 +126,7 @@ export default function App() {
     setResult(null);
     setMeta(null);
     setProgress(null);
-    setStreamChars(0);
-    setStreamPreview("");
     setElapsedMs(0);
-    streamBufferRef.current = "";
     startTimeRef.current = performance.now();
     setStage("extracting");
 
@@ -153,7 +141,7 @@ export default function App() {
       // 2) Full-result cache hit → render instantly.
       const cachedAnalysis = await getCachedAnalysis(hash, config.provider, config.model);
       if (cachedAnalysis) {
-        setResult(cachedAnalysis.result);
+        setResult(normalizeAnalysisResponse(cachedAnalysis.result) as AnalysisResult);
         setMeta({
           fileName: cachedAnalysis.meta.fileName,
           numPages: cachedAnalysis.meta.numPages,
@@ -183,10 +171,11 @@ export default function App() {
       setExtracted(doc);
 
       if (!doc.fullText.trim() || doc.fullText.trim().length < 200) {
+        const msg =
+          "No extractable text found. The PDF may be scanned images — try a text-based datasheet, or run OCR first.";
+        logError("pdf text extraction", msg, { fileName: file.name, numPages: doc.numPages });
         setStage("error");
-        setErrorMsg(
-          "No extractable text found. The PDF may be scanned images — try a text-based datasheet, or run OCR first.",
-        );
+        setErrorMsg(msg);
         return;
       }
 
@@ -200,12 +189,6 @@ export default function App() {
         guessedPart: guessed,
         text: doc.fullText,
         signal: controller.signal,
-        onProgress: (p) => {
-          // Cheap, allocation-free path: only update the ref here. The
-          // ticker reads this ref every 100 ms and flushes to React state,
-          // so we never re-render per token.
-          streamBufferRef.current = p.total;
-        },
       });
 
       const finalElapsed =
@@ -213,12 +196,14 @@ export default function App() {
 
       if ((response as AnalysisError).error) {
         const err = response as AnalysisError;
+        const msg = err.message || "The model determined this is not a datasheet.";
+        logError("analysis rejected", msg, { fileName: file.name, model: config.model });
         setStage("error");
-        setNotDatasheet(err.message || "The model determined this is not a datasheet.");
+        setNotDatasheet(msg);
         return;
       }
 
-      const result = response as AnalysisResult;
+      const result = normalizeAnalysisResponse(response) as AnalysisResult;
       setResult(result);
       setMeta({
         fileName: file.name,
@@ -242,6 +227,11 @@ export default function App() {
         setStage("idle");
         return;
       }
+      logError("analysis run", e, {
+        fileName: file?.name,
+        provider: config.provider,
+        model: config.model,
+      });
       setStage("error");
       setErrorMsg((e as Error).message || "Something went wrong.");
     } finally {
@@ -363,37 +353,9 @@ export default function App() {
             )}
 
             {extracted && stage === "analysing" && (
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-500">
-                <span>
-                  Sent {extracted.numPages} pages, ~{extracted.fullText.length.toLocaleString()} chars
-                  {extracted.truncated && " (truncated)"}.
-                </span>
-                <span className="font-mono tabular-nums">
-                  Received {streamChars.toLocaleString()} chars
-                </span>
-              </div>
-            )}
-
-            {stage === "analysing" && (
-              <div className="mt-3 rounded-md border border-ink-800 bg-ink-950/70 p-2">
-                <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-ink-500">
-                  <span>Live model output</span>
-                  <span className="text-ink-600">{config.model}</span>
-                </div>
-                <pre
-                  className="scrollbar-slim h-[72px] overflow-hidden whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed text-ink-400"
-                  aria-live="polite"
-                  aria-atomic="false"
-                >
-                  {streamPreview || (
-                    <span className="text-ink-600">
-                      Waiting for first token… (cold-start can take 10–60 s on local models)
-                    </span>
-                  )}
-                  {streamPreview && (
-                    <span className="ml-0.5 inline-block animate-pulse text-accent-400">▋</span>
-                  )}
-                </pre>
+              <div className="mt-3 text-xs text-ink-500">
+                Sent {extracted.numPages} pages, ~{extracted.fullText.length.toLocaleString()} chars
+                {extracted.truncated && " (truncated)"}.
               </div>
             )}
           </div>
