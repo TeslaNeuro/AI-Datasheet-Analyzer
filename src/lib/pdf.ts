@@ -36,6 +36,34 @@ const DEFAULT_CHAR_LIMIT = 180_000;
  */
 const PAGE_CONCURRENCY = 6;
 
+/**
+ * Safari (until 26.4) lacks ReadableStream async iteration, which modern
+ * pdf.js uses inside getTextContent(). Without this polyfill Safari throws
+ * "undefined is not a function (near '...value of readableStream...')".
+ */
+function polyfillReadableStreamAsyncIterator(): void {
+  if (
+    typeof ReadableStream === "undefined" ||
+    ReadableStream.prototype[Symbol.asyncIterator]
+  ) {
+    return;
+  }
+ReadableStream.prototype[Symbol.asyncIterator] = async function* (
+    this: ReadableStream,
+  ): AsyncGenerator<unknown, undefined, unknown> {
+    const reader = this.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) return undefined;
+        yield value;
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  };
+}
+
 // Lazy-loaded pdfjs handle. Importing pdfjs eagerly pulls ~1 MB into the
 // initial bundle even before the user drops a file; loading it on demand
 // makes the app paint faster and lets Vite code-split it into its own
@@ -44,6 +72,7 @@ let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
 function loadPdfjs(): Promise<typeof import("pdfjs-dist")> {
   if (!pdfjsPromise) {
     pdfjsPromise = (async () => {
+      polyfillReadableStreamAsyncIterator();
       const [pdfjsLib, workerUrl] = await Promise.all([
         import("pdfjs-dist"),
         import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
