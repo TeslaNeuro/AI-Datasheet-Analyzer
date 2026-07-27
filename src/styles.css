@@ -1,6 +1,129 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  --font-sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-ink-50: #f5f7fa;
+  --color-ink-100: #e6ebf2;
+  --color-ink-200: #c9d3e0;
+  --color-ink-300: #9eb0c4;
+  --color-ink-400: #6e85a0;
+  --color-ink-500: #4a627e;
+  --color-ink-600: #384d66;
+  --color-ink-700: #293a50;
+  --color-ink-800: #1b283a;
+  --color-ink-900: #0f1826;
+  --color-ink-950: #070d18;
+
+  --color-accent-400: #5eead4;
+  --color-accent-500: #14b8a6;
+  --color-accent-600: #0d9488;
+
+  --color-warn-400: #fbbf24;
+  --color-warn-500: #f59e0b;
+  --color-warn-600: #d97706;
+
+  --color-danger-400: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+
+  --shadow-soft: 0 1px 2px 0 rgba(0, 0, 0, 0.05), 0 8px 24px -12px rgba(15, 24, 38, 0.25);
+}
+
+@utility card {
+  @apply rounded-xl border border-ink-800 bg-ink-900/70 backdrop-blur-xs shadow-soft;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium
+    transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+    focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500/60;
+}
+
+@utility btn-primary {
+  @apply btn bg-accent-600 text-white hover:bg-accent-500;
+}
+
+@utility btn-secondary {
+  @apply btn bg-ink-800 text-ink-100 hover:bg-ink-700 border border-ink-700;
+}
+
+@utility btn-ghost {
+  @apply btn text-ink-300 hover:text-ink-100 hover:bg-ink-800/60;
+}
+
+@utility input {
+  @apply w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100
+    placeholder:text-ink-500 focus:outline-hidden focus:ring-2 focus:ring-accent-500/40
+    focus:border-accent-500/60;
+}
+
+@utility label {
+  @apply text-xs font-medium uppercase tracking-wider text-ink-400;
+}
+
+@utility chip {
+  @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium
+    bg-ink-800 text-ink-200 border border-ink-700;
+}
+
+@utility chip-accent {
+  @apply chip bg-accent-600/15 text-accent-400 border-accent-600/30;
+}
+
+@utility chip-warn {
+  @apply chip bg-warn-600/15 text-warn-400 border-warn-600/30;
+}
+
+@utility chip-danger {
+  @apply chip bg-danger-600/15 text-danger-400 border-danger-600/30;
+}
+
+@utility section-title {
+  @apply flex items-center gap-3 text-lg font-semibold text-ink-50;
+}
+
+@utility prose-tight {
+  & :where(p, ul, ol) {
+    @apply text-ink-200 leading-relaxed;
+  }
+  & :where(ul, ol) {
+    @apply pl-5 space-y-1.5;
+  }
+  & :where(ul) {
+    list-style: disc;
+  }
+  & :where(ol) {
+    list-style: decimal;
+  }
+  & :where(code) {
+    @apply rounded-sm bg-ink-800 px-1 py-0.5 text-[0.85em] font-mono text-accent-400;
+  }
+  & :where(strong) {
+    @apply text-ink-50;
+  }
+  & :where(a) {
+    @apply text-accent-400 hover:underline;
+  }
+  & :where(h1, h2, h3, h4) {
+    @apply text-ink-50 font-semibold mt-3 mb-1;
+  }
+}
+
+@utility scrollbar-slim {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-700) transparent;
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-ink-700);
+    border-radius: 8px;
+  }
+}
 
 @layer base {
   :root {
@@ -20,105 +143,16 @@
       #070d18;
   }
 
-  * {
-    border-color: theme("colors.ink.800");
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-ink-800);
   }
 
   ::selection {
     background: rgba(20, 184, 166, 0.35);
     color: white;
-  }
-}
-
-@layer components {
-  .card {
-    @apply rounded-xl border border-ink-800 bg-ink-900/70 backdrop-blur-sm shadow-soft;
-  }
-
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium
-           transition-colors disabled:opacity-50 disabled:cursor-not-allowed
-           focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/60;
-  }
-
-  .btn-primary {
-    @apply btn bg-accent-600 text-white hover:bg-accent-500;
-  }
-
-  .btn-secondary {
-    @apply btn bg-ink-800 text-ink-100 hover:bg-ink-700 border border-ink-700;
-  }
-
-  .btn-ghost {
-    @apply btn text-ink-300 hover:text-ink-100 hover:bg-ink-800/60;
-  }
-
-  .input {
-    @apply w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100
-           placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-accent-500/40
-           focus:border-accent-500/60;
-  }
-
-  .label {
-    @apply text-xs font-medium uppercase tracking-wider text-ink-400;
-  }
-
-  .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium
-           bg-ink-800 text-ink-200 border border-ink-700;
-  }
-
-  .chip-accent {
-    @apply chip bg-accent-600/15 text-accent-400 border-accent-600/30;
-  }
-
-  .chip-warn {
-    @apply chip bg-warn-600/15 text-warn-400 border-warn-600/30;
-  }
-
-  .chip-danger {
-    @apply chip bg-danger-600/15 text-danger-400 border-danger-600/30;
-  }
-
-  .section-title {
-    @apply flex items-center gap-3 text-lg font-semibold text-ink-50;
-  }
-
-  .prose-tight :where(p, ul, ol) {
-    @apply text-ink-200 leading-relaxed;
-  }
-  .prose-tight :where(ul, ol) {
-    @apply pl-5 space-y-1.5;
-  }
-  .prose-tight :where(ul) {
-    list-style: disc;
-  }
-  .prose-tight :where(ol) {
-    list-style: decimal;
-  }
-  .prose-tight :where(code) {
-    @apply rounded bg-ink-800 px-1 py-0.5 text-[0.85em] font-mono text-accent-400;
-  }
-  .prose-tight :where(strong) {
-    @apply text-ink-50;
-  }
-  .prose-tight :where(a) {
-    @apply text-accent-400 hover:underline;
-  }
-  .prose-tight :where(h1, h2, h3, h4) {
-    @apply text-ink-50 font-semibold mt-3 mb-1;
-  }
-
-  .scrollbar-slim {
-    scrollbar-width: thin;
-    scrollbar-color: theme("colors.ink.700") transparent;
-  }
-  .scrollbar-slim::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  .scrollbar-slim::-webkit-scrollbar-thumb {
-    background: theme("colors.ink.700");
-    border-radius: 8px;
   }
 }

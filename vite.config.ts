@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 /** Forward browser-side errors to the `npm run dev` terminal for easy copy-paste. */
 function clientErrorLogger(): Plugin {
@@ -48,7 +49,7 @@ function clientErrorLogger(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), clientErrorLogger()],
+  plugins: [react(), tailwindcss(), clientErrorLogger()],
   server: {
     port: 5173,
     open: true,

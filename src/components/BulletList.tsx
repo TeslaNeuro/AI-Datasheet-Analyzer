@@ -22,7 +22,7 @@ const REMARK_PLUGINS = [remarkGfm];
 const MD_COMPONENTS: Components = {
   p: ({ children }) => <span>{children}</span>,
   code: ({ children }) => (
-    <code className="rounded bg-ink-800 px-1 py-0.5 text-[0.85em] font-mono text-accent-400">
+    <code className="rounded-sm bg-ink-800 px-1 py-0.5 text-[0.85em] font-mono text-accent-400">
       {children}
     </code>
   ),
