@@ -1,3 +1,11 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * System and user prompts that steer the model toward adaptive, risk-first
+ * JSON summaries tailored to the component type found in the datasheet.
+ */
 export const SYSTEM_PROMPT = `You are an expert Electronics Engineer specialising in component evaluation, datasheet interpretation, and risk analysis.
 
 Your task is to read the provided datasheet text and produce a concise, structured engineering summary.

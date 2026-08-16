@@ -1,3 +1,14 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Client-side PDF text extraction via pdf.js. Files never leave the
+ * browser; only the extracted text is later sent to the chosen model.
+ * Also provides SHA-256 hashing for the IndexedDB cache and a best-effort
+ * part-number guess from early pages.
+ */
+
 // We deliberately use structural types for the pdfjs surface we touch
 // instead of importing the deep types — pdfjs-dist's d.ts paths have
 // shifted between minor versions and a structural shape is enough for

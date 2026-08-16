@@ -1,3 +1,13 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Root UI: PDF upload, provider settings, extraction/analysis pipeline,
+ * and rendering of the structured engineering summary. Orchestrates
+ * local pdf.js parsing, IndexedDB caching, and LLM calls (Puter / Ollama /
+ * OpenAI-compatible).
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Dropzone } from "./components/Dropzone";
 import { SettingsPanel } from "./components/SettingsPanel";

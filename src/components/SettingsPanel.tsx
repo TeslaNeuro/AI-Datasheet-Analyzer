@@ -1,3 +1,11 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Modal for choosing the LLM provider (Puter, Ollama, OpenAI, OpenRouter,
+ * or custom), model name, and optional API key / base URL.
+ */
 import { useEffect, useState } from "react";
 import { PROVIDER_PRESETS, type ProviderConfig, type ProviderId } from "../lib/types";
 import { IconSettings, IconX } from "./Icons";

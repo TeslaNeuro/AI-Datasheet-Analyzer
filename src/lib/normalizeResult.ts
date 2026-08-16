@@ -1,3 +1,11 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Defensive normaliser for raw model JSON — fills required fields, coerces
+ * types, and ensures the UI always receives a stable AnalysisResult shape.
+ */
 import type {
   AnalysisResponse,
   AnalysisResult,

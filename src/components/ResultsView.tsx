@@ -1,3 +1,11 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Renders the full adaptive analysis — identification through decision
+ * summary — with Markdown / JSON export actions.
+ */
 import { useMemo, useState, type ReactNode } from "react";
 import type { AnalysisResult } from "../lib/types";
 import { analysisToMarkdown } from "../lib/exportMarkdown";

@@ -1,3 +1,12 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Lightweight error logging — console output always, and in development a
+ * POST to Vite's /__client-error middleware so failures appear in the
+ * terminal as well.
+ */
 export interface ErrorPayload {
   context: string;
   message?: string;

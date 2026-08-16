@@ -1,56 +1,66 @@
 # 📄 AI Datasheet Analyzer
 
-A web app that turns any electronic component datasheet (PDF) into a concise,
-structured engineering summary — written from the point of view of an experienced
-electronics engineer focused on **risk**, **bring-up**, and **design watch-outs**.
+> Turn any electronic component datasheet into a **risk-first engineering summary** — adaptive sections, bring-up watch-outs, and decision-ready pros / cons / red flags.
 
-It adapts the output to the component type — IC, sensor, power device, connector,
-module, equipment, etc. — rather than forcing a fixed template.
+<br>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-14b8a6?style=for-the-badge" alt="MIT License" />
+  <img src="https://img.shields.io/badge/React-TypeScript-0f1826?style=for-the-badge&logo=react&logoColor=5eead4" alt="React + TypeScript" />
+  <img src="https://img.shields.io/badge/Vite-Tailwind-0f1826?style=for-the-badge&logo=vite&logoColor=5eead4" alt="Vite + Tailwind" />
+  <img src="https://img.shields.io/badge/no%20backend-static%20SPA-5eead4?style=for-the-badge&labelColor=0f1826" alt="Static SPA" />
+</p>
+
+<p align="center">
+  <b>Author:</b> Arshia Keshvari (<code>@TeslaNeuro</code>)
+  &nbsp;·&nbsp;
+  <b>License:</b> <a href="./LICENSE">MIT</a>
+</p>
+
+<br>
+
+## 🎯 What it does
+
+Drop in a PDF datasheet. The app extracts text **locally in your browser**, then asks an LLM to produce a structured summary written like an experienced electronics engineer — focused on risk, bring-up, and design watch-outs.
+
+Output adapts to the part: IC, sensor, power device, connector, module, equipment, and more. Irrelevant sections are omitted; component-specific extras can appear when they matter.
+
+<br>
 
 ## ✨ Features
 
-- **Zero-setup default (Puter.js)** — out of the box, the app runs through
-  [Puter.js](https://docs.puter.com/AI/chat/). No API key, no server, nothing
-  to configure. The first analysis prompts the end user to sign in to a free
-  Puter account; new users get free credits and only pay for what they use
-  after that. The app itself is never billed.
-- **Local / private mode (Ollama)** — dedicated one-click preset for
-  [Ollama](https://ollama.com). Runs entirely on your machine, no key, no
-  network calls to a third party. Bring your own model (`gemma4`,
-  `llama3.3`, etc.).
-- **Bring-your-own-key fallback** — switch to OpenAI, OpenRouter, or any
-  other OpenAI-compatible `/chat/completions` endpoint (Groq, Together, vLLM,
-  LM Studio, Gemini's OpenAI shim, etc.). Key is stored only in
-  `localStorage`.
-- **Local PDF parsing** — datasheets are parsed in the browser with
-  [`pdfjs-dist`](https://github.com/mozilla/pdfjs-dist). The file never leaves
-  your machine; only extracted text is sent to the model.
-- **Adaptive sections** — irrelevant sections (e.g. pinout for a connector,
-  electrical curves for a passive part) are automatically omitted, and the
-  model can add component-specific extra sections.
-- **Risk-first** — the *Risks, Caveats & Design Watch-outs* and *Decision
-  Summary* sections are always present, with explicit red flags.
-- **Exports** — copy/download the structured result as Markdown or JSON.
-- **No backend** — pure static SPA.
+| | |
+| :--- | :--- |
+| 🆓 **Zero-setup default** | Runs on [Puter.js](https://docs.puter.com/AI/chat/) — no API key, no server. First analysis signs into a free Puter account; users pay only for their own usage. |
+| 🦙 **Local / private mode** | One-click [Ollama](https://ollama.com) preset. Models stay on your machine. |
+| 🔑 **Bring your own key** | OpenAI, OpenRouter, or any OpenAI-compatible endpoint (Groq, Together, vLLM, LM Studio, …). Key stays in `localStorage`. |
+| 📕 **Local PDF parsing** | [`pdfjs-dist`](https://github.com/mozilla/pdfjs-dist) in the browser. The file never leaves your machine — only extracted text is sent to the model. |
+| 🧩 **Adaptive sections** | Pinout, curves, etc. appear only when relevant; custom extra sections for sensors, SMPS, connectors, and more. |
+| ⚠️ **Risk-first** | *Risks & design watch-outs* and *Decision summary* are always present, with explicit red flags. |
+| 📤 **Exports** | Copy or download as Markdown or JSON. |
+| 🪶 **No backend** | Pure static SPA — host anywhere. |
+
+<br>
 
 ## 🧱 Output structure
 
-The model produces JSON that the UI renders into nine adaptive sections:
+Nine adaptive sections (omit what doesn’t apply; add extras when useful):
 
-1. Component Identification
-2. Absolute Maximum Ratings *(if applicable)*
-3. Recommended Operating Conditions *(if applicable)*
-4. Electrical / Performance Characteristics *(if applicable)*
-5. Pinout / Interface / Connections *(if applicable)*
-6. Recommended Circuits / Application Notes *(if applicable)*
-7. Risks, Caveats & Design Watch-outs *(always present)*
-8. Alternatives & Cross-References *(if known)*
-9. Summary for Decision-Makers *(always present, with pros / cons / red flags)*
+| # | Section | When |
+| :-: | :--- | :--- |
+| 1 | Component Identification | Always |
+| 2 | Absolute Maximum Ratings | If applicable |
+| 3 | Recommended Operating Conditions | If applicable |
+| 4 | Electrical / Performance Characteristics | If applicable |
+| 5 | Pinout / Interface / Connections | If applicable |
+| 6 | Recommended Circuits / Application Notes | If applicable |
+| 7 | Risks, Caveats & Design Watch-outs | **Always** |
+| 8 | Alternatives & Cross-References | If known |
+| 9 | Summary for Decision-Makers | **Always** (pros · cons · red flags) |
 
-Any sections that don't fit the part are omitted; the model can also add
-custom "extra sections" for component-specific concerns (e.g. *Calibration*
-for a sensor, *Safety / Isolation* for a SMPS, *Mating / IP rating* for a
-connector).
+Examples of model-added extras: *Calibration* (sensor), *Safety / Isolation* (SMPS), *Mating / IP rating* (connector).
+
+<br>
 
 ## 🚀 Quick start
 
@@ -59,106 +69,125 @@ npm install
 npm run dev
 ```
 
-Then open <http://localhost:5173>, drop a PDF, and click **Analyse**. That's it.
+Open [http://localhost:5173](http://localhost:5173) → drop a PDF → **Analyse**.
 
-The first call via Puter will open Puter's sign-in popup. Once you're signed
-in, future calls are silent.
+The first Puter call opens a sign-in popup; later runs are silent.
 
-### 🔁 Switching providers
+<br>
 
-Open **Settings** to switch from Puter to another provider:
+## 🔁 Providers
 
-| Provider       | Key needed? | Suggested model                                          | Notes                                                                 |
-| -------------- | ----------- | -------------------------------------------------------- | --------------------------------------------------------------------- |
-| **Puter**      | **No**          | `claude-sonnet-4-5`, `gpt-5.4-nano`, `gemini-2.5-flash`  | Keyless, user-pays via Puter account.                                 |
-| **Ollama**     | **No**          | `hf.co/yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF:Q4_K_M`, `llama3.3`, `gemma4`, `qwen3.5:9b`                      | 100% local. Requires CORS to be enabled — see below.                  |
-| **OpenAI**         | **Yes**         | `gpt-4o-mini` or `gpt-4o`                                | Bring your own key.                                                   |
-| **OpenRouter**     | **Yes**         | `anthropic/claude-3.5-sonnet`                            | One key, hundreds of models incl. free-tier ones.                     |
-| **Custom**         | **Yes**         | **Any OpenAI-compatible model**                              | Groq, Together, vLLM, LM Studio, Gemini's OpenAI shim, etc.           |
+Open **Settings** to switch providers:
 
-For the BYOK providers the model should ideally support JSON mode
-(`response_format: json_object`). Puter routes to underlying vendors that may
-or may not honour JSON mode, so the prompt also instructs the model directly
-to emit a single JSON object — and the parser will recover the JSON out of
-prose if needed.
+| Provider | Key? | Suggested models | Notes |
+| :--- | :-: | :--- | :--- |
+| **Puter** | No | `claude-sonnet-4-5`, `gpt-5.4-nano`, `gpt-5.2-chat`, `gemini-2.5-flash` | Keyless; user-pays via Puter |
+| **Ollama** | No | `qwen3.6:27b`, `gemma4:12b`, `qwen3-coder:30b`, `llama3.3` | 100% local — see CORS below |
+| **OpenAI** | Yes | `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.4-nano` | Bring your own key |
+| **OpenRouter** | Yes | `anthropic/claude-sonnet-4.5`, `google/gemini-2.5-flash`, `openai/gpt-5.4-nano` | One key, many models |
+| **Custom** | Yes | Any OpenAI-compatible model | Groq, Together, vLLM, LM Studio, … |
 
-### 🦙 Using Ollama (local, free, private)
+Prefer models that support JSON mode (`response_format: json_object`). Puter routes may not always honour it, so the prompt also demands a single JSON object and the parser recovers JSON from prose when needed.
 
-1. Install Ollama from <https://ollama.com> and pull a capable model:
+<br>
 
-   ```bash
-   ollama pull gemma4
-   ```
+## 🦙 Ollama (local, free, private)
 
-   For structured datasheet extraction, instruction-tuned models in the 14B+
-   range work best. Smaller models (3–8B) often skip required JSON fields.
-   Tested-good picks: `qwen2.5:14b-instruct`, `qwen2.5:32b-instruct`,
-   `llama3.3`, `gemma2:27b-instruct`, `phi4`.
+**1. Install & pull a model**
 
-2. **Enable CORS so the browser app can call Ollama.** Ollama only accepts
-   browser requests from origins listed in the `OLLAMA_ORIGINS` env var. Set
-   it *before* starting Ollama:
+```bash
+ollama pull qwen3.6:27b
+```
 
-   | OS                 | How to set it                                                                                          |
-   | ------------------ | ------------------------------------------------------------------------------------------------------ |
-   | macOS              | `launchctl setenv OLLAMA_ORIGINS "*"` then quit and reopen the Ollama menu-bar app.                    |
-   | Linux (systemd)    | `sudo systemctl edit ollama.service`, add `Environment="OLLAMA_ORIGINS=*"`, then `systemctl restart ollama`. |
-   | Windows            | Add a System environment variable `OLLAMA_ORIGINS=*` (Settings → System → About → Advanced → Environment Variables), then restart Ollama. |
+Models in the **~12B+** range (or strong MoE equivalents) work best for structured extraction. Smaller 3–8B models often skip required JSON fields.
 
-   For tighter security, instead of `*` use the exact dev origin, e.g.
-   `OLLAMA_ORIGINS=http://localhost:5173,http://localhost:4173`.
+| Tier | Models | Rough fit |
+| :--- | :--- | :--- |
+| **Recommended** | `qwen3.6:27b`, `gemma4:12b` | Best balance for datasheet JSON |
+| **Coding / long context** | `qwen3-coder:30b`, `gpt-oss:20b` | Strong instruction following on 16–24 GB cards |
+| **Larger rigs** | `llama3.3:70b`, `gemma4:31b` | Higher quality when VRAM allows |
+| **Light / fallback** | `qwen3:8b`, `phi4-mini` | Faster, but more incomplete JSON |
 
-3. In the app, open **Settings → Ollama (local)**, confirm the base URL
-   (default `http://localhost:11434/v1`), pick your model, and Save.
+**2. Enable CORS** so the browser can call Ollama (`OLLAMA_ORIGINS` before starting Ollama):
 
-   The app will surface targeted error messages if Ollama isn't running
-   ("Could not reach Ollama…") or if the requested model isn't pulled yet
-   ("Ollama returned 404 — the model is probably not pulled yet").
+| OS | Setup |
+| :--- | :--- |
+| **macOS** | `launchctl setenv OLLAMA_ORIGINS "*"` → quit & reopen the Ollama menu-bar app |
+| **Linux** | `sudo systemctl edit ollama.service` → add `Environment="OLLAMA_ORIGINS=*"` → `systemctl restart ollama` |
+| **Windows** | System env var `OLLAMA_ORIGINS=*` → restart Ollama |
 
-### 🏗️ Build for production
+Tighter option: `OLLAMA_ORIGINS=http://localhost:5173,http://localhost:4173`.
+
+**3. In the app** → **Settings → Ollama (local)** → confirm base URL (`http://localhost:11434/v1`) → pick model → Save.
+
+<br>
+
+## 🏗️ Production build
 
 ```bash
 npm run build
 npm run preview
 ```
 
-The output in `dist/` is a fully static SPA that you can host on any static
-file host (GitHub Pages, Netlify, S3, Cloudflare Pages, etc.).
+`dist/` is a fully static SPA — host on GitHub Pages, Netlify, Cloudflare Pages, S3, or any static host.
+
+<br>
 
 ## 🔐 Privacy
 
-- PDFs are parsed locally in your browser.
-- This app has no backend. Extracted text is sent **directly** from your
-  browser to whichever provider you've selected:
-  - **Puter mode**: text goes to Puter's API, which routes to the chosen model
-    vendor (OpenAI, Anthropic, Google, etc.). See Puter's privacy policy for
-    their handling.
-  - **BYOK mode**: text and your API key go directly to the endpoint you
-    configured; the key is stored only in `localStorage`.
+- PDFs are parsed **in your browser**.
+- There is **no app backend**. Extracted text goes straight from the browser to your chosen provider:
+  - **Puter** → Puter’s API → underlying model vendor
+  - **BYOK / Ollama** → your configured endpoint; API keys live only in `localStorage`
+
+<br>
 
 ## ⚠️ Limits
 
-- Very large datasheets (often 200+ pages) are truncated to roughly 180 000
-  characters before being sent to the model. The UI flags when this happens
-  and the model is instructed to record assumptions made because of truncation.
-- Scanned / image-only PDFs will not extract any text. Run OCR first or use a
-  text-based datasheet.
-- The quality of the summary depends heavily on the model. For safety-critical
-  decisions, always cross-check against the original datasheet.
+| Topic | Detail |
+| :--- | :--- |
+| Large PDFs | ~180 000 characters max; UI flags truncation and the model notes assumptions |
+| Scanned PDFs | Image-only files yield no text — OCR first or use a text-based datasheet |
+| Safety-critical use | Always cross-check against the original datasheet |
+
+<br>
 
 ## 🧰 Tech stack
 
-- Vite + React + TypeScript
-- Tailwind CSS
-- `pdfjs-dist` for client-side PDF text extraction
-- `react-markdown` + `remark-gfm` for inline markdown in bullets
-- [Puter.js v2](https://docs.puter.com/AI/chat/) for keyless model access
-- OpenAI-compatible chat completions API with JSON mode (BYOK fallback)
+```
+Vite · React · TypeScript · Tailwind CSS
+pdfjs-dist · react-markdown · remark-gfm
+Puter.js v2 · OpenAI-compatible chat completions
+```
+
+<br>
+
+## 📁 Project layout
+
+```
+src/
+├── App.tsx                 # Upload → extract → analyse → results
+├── components/             # Dropzone, Settings, Results, UI chrome
+└── lib/
+    ├── pdf.ts              # Local PDF text extraction + hashing
+    ├── llm.ts              # Puter / OpenAI-compatible client
+    ├── prompt.ts           # Risk-first system & user prompts
+    ├── cache.ts            # IndexedDB extraction & analysis cache
+    └── …                   # Types, storage, export, error logging
+```
+
+<br>
 
 ## 👤 Author
 
-Created and maintained by **Arshia Keshvari** (`@TeslaNeuro`).
+**Arshia Keshvari** (`@TeslaNeuro`)
+
+Created and maintained as an open-source tool for electronics engineers who want faster, safer datasheet triage.
+
+<br>
 
 ## 📜 License
 
-**[`MIT`](./LICENSE)**
+Released under the **[MIT License](./LICENSE)**.
+
+Copyright © 2026 Arshia Keshvari (`@TeslaNeuro`)

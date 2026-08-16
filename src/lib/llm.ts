@@ -1,3 +1,12 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * LLM client — routes analysis requests through Puter.js (keyless) or any
+ * OpenAI-compatible /chat/completions endpoint, with streaming and JSON
+ * recovery when models wrap the payload in prose.
+ */
 import { SYSTEM_PROMPT, buildUserPrompt } from "./prompt";
 import { normalizeAnalysisResponse } from "./normalizeResult";
 import type { AnalysisResponse, ProviderConfig } from "./types";

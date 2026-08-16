@@ -1,3 +1,11 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Shared section / subgroup chrome for the results view — numbered title,
+ * intent-coloured icon, and nested bullet groups.
+ */
 import type { ReactNode } from "react";
 
 interface Props {

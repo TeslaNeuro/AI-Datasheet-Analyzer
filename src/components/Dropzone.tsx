@@ -1,3 +1,11 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Drag-and-drop / click-to-upload zone that accepts a single PDF datasheet
+ * and surfaces the selected file name until analysis starts.
+ */
 import { useCallback, useRef, useState } from "react";
 import { IconUpload, IconFile, IconX } from "./Icons";
 

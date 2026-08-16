@@ -1,3 +1,12 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Converts a structured AnalysisResult into Markdown suitable for copy /
+ * download — mirrors the on-screen section order for engineers who want
+ * the summary in their notes or PRs.
+ */
 import type { AnalysisResult } from "./types";
 
 function bullets(arr?: string[] | null): string {

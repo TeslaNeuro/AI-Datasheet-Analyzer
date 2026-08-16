@@ -1,7 +1,8 @@
-import type { ExtractedDocument } from "./pdf";
-import type { AnalysisResult } from "./types";
-
 /**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
  * IndexedDB-backed cache. Two stores keyed by the SHA-256 hash of the
  * uploaded PDF:
  *
@@ -13,6 +14,8 @@ import type { AnalysisResult } from "./types";
  * — localStorage's 5 MB budget would fill up within ~30 datasheets and
  * triggers expensive synchronous serialisation on the main thread.
  */
+import type { ExtractedDocument } from "./pdf";
+import type { AnalysisResult } from "./types";
 
 const DB_NAME = "datasheet-analyzer";
 const DB_VERSION = 1;

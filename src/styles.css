@@ -1,3 +1,11 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Global theme tokens and component utility classes (cards, buttons,
+ * chips) used across the SPA.
+ */
 @import 'tailwindcss';
 
 @theme {

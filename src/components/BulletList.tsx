@@ -1,3 +1,12 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Renders analysis bullets with lightweight Markdown (GFM). Components and
+ * remark plugins are hoisted to module scope so large results lists do not
+ * re-parse on every parent re-render.
+ */
 import { memo, type ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";

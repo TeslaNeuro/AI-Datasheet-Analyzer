@@ -1,6 +1,11 @@
-// Minimal ambient typings for Puter.js v2 — only the surface we use.
-// See https://docs.puter.com/AI/chat/
-
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Minimal ambient typings for Puter.js v2 — only the AI chat / auth
+ * surface this app uses. See https://docs.puter.com/AI/chat/
+ */
 export {};
 
 declare global {

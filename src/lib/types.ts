@@ -1,3 +1,11 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Shared TypeScript types for analysis results and LLM provider presets
+ * (Puter, Ollama, OpenAI, OpenRouter, custom OpenAI-compatible endpoints).
+ */
 export interface Identification {
   componentType: string;
   manufacturer: string | null;

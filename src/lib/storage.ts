@@ -1,3 +1,11 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Persists the selected LLM provider config (base URL, model, optional API
+ * key) in localStorage so Settings survive page reloads.
+ */
 import { PROVIDER_PRESETS, type ProviderConfig, type ProviderId } from "./types";
 
 const KEY = "datasheet-analyzer.providerConfig.v2";

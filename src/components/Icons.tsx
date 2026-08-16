@@ -1,3 +1,11 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Small inline SVG icon set used by the header, dropzone, settings, and
+ * results sections — no external icon dependency.
+ */
 import type { SVGProps } from "react";
 
 type Props = SVGProps<SVGSVGElement>;

@@ -1,3 +1,12 @@
+/**
+ * AI Datasheet Analyzer
+ * Author: Arshia Keshvari (@TeslaNeuro)
+ * License: MIT
+ *
+ * Vite build/dev config — React + Tailwind, pdf.js worker support, and a
+ * small middleware that prints browser errors into the `npm run dev`
+ * terminal for easier debugging.
+ */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
