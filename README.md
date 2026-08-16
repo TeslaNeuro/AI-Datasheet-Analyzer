@@ -75,6 +75,44 @@ The first Puter call opens a sign-in popup; later runs are silent.
 
 <br>
 
+## 🖼️ Workflow guide
+
+Four steps from empty screen to a decision-ready summary:
+
+### 1️⃣ Upload a datasheet
+
+Drag a PDF into the dropzone (or click to browse). Nothing is uploaded to an app server — parsing stays in your browser.
+
+<p align="center">
+  <img src="./docs/screenshots/01-upload.jpg" alt="Empty upload screen with PDF dropzone and How it works cards" width="900" />
+</p>
+
+### 2️⃣ Confirm & analyse
+
+With a file selected, click **Analyse Datasheet**. Use **Settings** first if you want Ollama, OpenAI, OpenRouter, or a custom endpoint instead of Puter.
+
+<p align="center">
+  <img src="./docs/screenshots/02-analyse.jpg" alt="PDF selected and Analyse Datasheet ready to run" width="900" />
+</p>
+
+### 3️⃣ Watch extraction & analysis
+
+The app extracts text page-by-page, then streams the model response. You can cancel anytime.
+
+<p align="center">
+  <img src="./docs/screenshots/03-analysing.jpg" alt="In-progress analysis with elapsed timer" width="900" />
+</p>
+
+### 4️⃣ Review results & export
+
+Browse adaptive sections (identification, ratings, risks, decision summary, …). Copy or download as **Markdown** or **JSON**.
+
+<p align="center">
+  <img src="./docs/screenshots/04-results.jpg" alt="Structured results with identification, risks, and decision summary" width="900" />
+</p>
+
+<br>
+
 ## 🔁 Providers
 
 Open **Settings** to switch providers:
@@ -165,6 +203,7 @@ Puter.js v2 · OpenAI-compatible chat completions
 ## 📁 Project layout
 
 ```
+docs/screenshots/           # Workflow guide images for this README
 src/
 ├── App.tsx                 # Upload → extract → analyse → results
 ├── components/             # Dropzone, Settings, Results, UI chrome
